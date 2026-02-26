@@ -288,3 +288,21 @@ async def main():
     await dp.start_polling(bot)
 
 asyncio.run(main())
+from aiogram.filters import Command
+
+# ================= GET VIDEO FILE_ID =================
+@dp.message(Command("getvideoid"))
+async def get_video_id(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.reply("📤 Отправьте видео, чтобы получить file_id.")
+
+    # Регистрируем временный хэндлер для видео
+    @dp.message()
+    async def handle_video(message2: types.Message):
+        if message2.from_user.id != ADMIN_ID:
+            return
+        if message2.video:
+            await message2.reply(f"✅ File ID вашего видео:\n`{message2.video.file_id}`", parse_mode="Markdown")
+        else:
+            await message2.reply("❌ Это не видео. Пожалуйста, отправьте видео.")
