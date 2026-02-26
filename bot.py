@@ -11,7 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # токен бота из Railway Variables
 ADMIN_ID = 888130657  # <-- Вставь сюда свой числовой Telegram ID
-GUIDE_VIDEO_ID = "BAACAgQAAxkBAAMjaaC_slYqu3k9Z7CzphdkF8SLClEAAp4eAAKbCghRF0U1Yj2NUrw6BA"  # <-- File ID видео для Qo'llanma
+GUIDE_VIDEO_ID = "PUT_VIDEO_FILE_ID_HERE"  # <-- File ID видео для Qo'llanma
 WELCOME_PHOTO_ID = "PUT_WELCOME_PHOTO_FILE_ID_HERE"  # <-- File ID фото для приветствия
 # ==========================================
 
@@ -44,6 +44,9 @@ class BroadcastState(StatesGroup):
     waiting_for_button_text = State()
     waiting_for_button_link = State()
     confirm = State()
+
+class GetFileState(StatesGroup):
+    waiting_for_file = State()
 
 # ================= KEYBOARDS =================
 def main_keyboard(user_id: int):
@@ -89,12 +92,18 @@ async def start_handler(message: types.Message):
     await add_user(message.from_user.id)
     is_admin = message.from_user.id == ADMIN_ID
 
-    # Персонализированное приветствие
     caption = (
-        f"Assalomu aleykum {message.from_user.full_name} 👋\n\n"
-        "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali kirib foydalanishingiz mumkin ✅.\n\n"
+        f"Assalomu aleykum {str(message.from_user.full_name)} 👋\n\n"
+        "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali "
+        "kirib foydalanishingiz mumkin ✅.\n\n"
         "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
     )
+
+    if not WELCOME_PHOTO_ID or WELCOME_PHOTO_ID.startswith("PUT_"):
+        await message.answer(
+            "❌ WELCOME_PHOTO_ID не задан. Пожалуйста, вставьте действительный file_id фото."
+        )
+        return
 
     await message.answer_photo(
         photo=WELCOME_PHOTO_ID,
@@ -115,7 +124,6 @@ async def send_guide(callback: types.CallbackQuery):
             ]
         ]
     )
-    # Отправляем видео с кнопкой, кнопки не пропадают
     await callback.message.answer_video(
         video=GUIDE_VIDEO_ID,
         caption="📖 Qo'llanma\n\nBu videoda qanday buyurtma qilish ko‘rsatilgan.",
@@ -274,7 +282,14 @@ async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
 
 # ================= UNIVERSAL GET FILE_ID =================
 @dp.message(Command("getvideoid"))
-async def get_file_id(message: types.Message):
+async def start_get_file(message: types.Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await state.set_state(GetFileState.waiting_for_file)
+    await message.reply("📤 Пожалуйста, отправьте фото, видео или документ, чтобы получить file_id.")
+
+@dp.message(GetFileState.waiting_for_file)
+async def handle_file(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
 
@@ -289,6 +304,9 @@ async def get_file_id(message: types.Message):
         await message.reply(f"✅ File ID вашего документа:\n`{file_id}`", parse_mode="Markdown")
     else:
         await message.reply("❌ Это не фото, видео или документ. Пожалуйста, отправьте подходящий файл.")
+        return
+
+    await state.clear()
 
 # ================= RUN =================
 async def main():
