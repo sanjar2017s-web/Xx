@@ -270,3 +270,21 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main()) 
+from aiogram import Bot, types, Dispatcher
+import asyncio
+import os
+
+TOKEN = os.getenv("BOT_TOKEN")
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+async def main():
+    async def handle_video(message: types.Message):
+        if message.video:
+            print("File ID:", message.video.file_id)
+    from aiogram.filters import ContentType
+    dp.message.register(handle_video, ContentType.VIDEO)
+
+    await dp.start_polling(bot)
+
+asyncio.run(main())
