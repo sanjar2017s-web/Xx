@@ -10,8 +10,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # Railway подставит токен
-ADMIN_ID = 888130657  # <-- ВСТАВЬ СВОЙ TELEGRAM ID
-GUIDE_VIDEO_ID = "PUT_VIDEO_FILE_ID_HERE"  # <-- ВСТАВЬ file_id видео для Qo'llanma
+ADMIN_ID = 888130657  # <-- Вставь сюда свой числовой Telegram ID
+GUIDE_VIDEO_ID = "PUT_VIDEO_FILE_ID_HERE"  # <-- File ID видео для Qo'llanma
 # ==========================================
 
 bot = Bot(token=TOKEN)
@@ -70,12 +70,10 @@ def main_keyboard(is_admin=False):
             )
         ]
     ]
-
     if is_admin:
         keyboard.append(
             [InlineKeyboardButton(text="🛠 Admin Panel", callback_data="admin_panel")]
         )
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def admin_keyboard():
@@ -141,7 +139,6 @@ async def get_content(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
 
-    # Определяем тип контента
     if message.photo:
         content_type = "photo"
         content_id = message.photo[-1].file_id
@@ -163,7 +160,6 @@ async def get_content(message: types.Message, state: FSMContext):
         content_id=content_id,
         caption=caption
     )
-
     await state.set_state(BroadcastState.waiting_for_button_text)
     await message.answer(
         "Введите текст кнопки.\nЕсли кнопка не нужна — отправьте: -"
@@ -217,7 +213,7 @@ async def preview_broadcast(message: types.Message, state: FSMContext):
         await message.answer_photo(photo=data["content_id"], caption=data["caption"], reply_markup=keyboard)
     elif data["content_type"] == "video":
         await message.answer_video(video=data["content_id"], caption=data["caption"], reply_markup=keyboard)
-    else:  # текст
+    else:
         await message.answer(text=data["content_id"], reply_markup=keyboard)
 
     await message.answer("Отправить эту рассылку?", reply_markup=confirm_keyboard)
@@ -253,7 +249,7 @@ async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
                 await bot.send_photo(chat_id=user[0], photo=data["content_id"], caption=data["caption"], reply_markup=keyboard)
             elif data["content_type"] == "video":
                 await bot.send_video(chat_id=user[0], video=data["content_id"], caption=data["caption"], reply_markup=keyboard)
-            else:  # текст
+            else:
                 await bot.send_message(chat_id=user[0], text=data["content_id"], reply_markup=keyboard)
             count += 1
             await asyncio.sleep(0.05)  # антиспам
@@ -263,33 +259,6 @@ async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(f"✅ Рассылка завершена.\nОтправлено: {count}")
     await state.clear()
 
-# ================= RUN =================
-async def main():
-    await init_db()
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main()) 
-from aiogram import Bot, types, Dispatcher
-import asyncio
-import os
-
-TOKEN = os.getenv("BOT_TOKEN")
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
-
-async def main():
-    async def handle_video(message: types.Message):
-        if message.video:
-            print("File ID:", message.video.file_id)
-    from aiogram.filters import ContentType
-    dp.message.register(handle_video, ContentType.VIDEO)
-
-    await dp.start_polling(bot)
-
-asyncio.run(main())
-from aiogram.filters import Command
-
 # ================= GET VIDEO FILE_ID =================
 @dp.message(Command("getvideoid"))
 async def get_video_id(message: types.Message):
@@ -297,7 +266,6 @@ async def get_video_id(message: types.Message):
         return
     await message.reply("📤 Отправьте видео, чтобы получить file_id.")
 
-    # Регистрируем временный хэндлер для видео
     @dp.message()
     async def handle_video(message2: types.Message):
         if message2.from_user.id != ADMIN_ID:
@@ -306,3 +274,11 @@ async def get_video_id(message: types.Message):
             await message2.reply(f"✅ File ID вашего видео:\n`{message2.video.file_id}`", parse_mode="Markdown")
         else:
             await message2.reply("❌ Это не видео. Пожалуйста, отправьте видео.")
+
+# ================= RUN =================
+async def main():
+    await init_db()
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
