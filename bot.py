@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # Railway подставит токен
-ADMIN_ID = 123456789  # <-- ВСТАВЬ СВОЙ TELEGRAM ID
+ADMIN_ID = 888130657  # <-- ВСТАВЬ СВОЙ TELEGRAM ID
 GUIDE_VIDEO_ID = "PUT_VIDEO_FILE_ID_HERE"  # <-- ВСТАВЬ file_id видео для Qo'llanma
 # ==========================================
 
