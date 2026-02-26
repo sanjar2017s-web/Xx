@@ -9,9 +9,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # ================= CONFIG =================
-TOKEN = os.getenv("BOT_TOKEN")  # Railway подставит токен
+TOKEN = os.getenv("BOT_TOKEN")  # токен бота из Railway Variables
 ADMIN_ID = 888130657  # <-- Вставь сюда свой числовой Telegram ID
 GUIDE_VIDEO_ID = "BAACAgQAAxkBAAMjaaC_slYqu3k9Z7CzphdkF8SLClEAAp4eAAKbCghRF0U1Yj2NUrw6BA"  # <-- File ID видео для Qo'llanma
+WELCOME_PHOTO_ID = "PUT_WELCOME_PHOTO_FILE_ID_HERE"  # <-- File ID фото для приветствия
 # ==========================================
 
 bot = Bot(token=TOKEN)
@@ -45,7 +46,8 @@ class BroadcastState(StatesGroup):
     confirm = State()
 
 # ================= KEYBOARDS =================
-def main_keyboard(is_admin=False):
+def main_keyboard(user_id: int):
+    is_admin = user_id == ADMIN_ID
     keyboard = [
         [
             InlineKeyboardButton(
@@ -86,9 +88,18 @@ def admin_keyboard():
 async def start_handler(message: types.Message):
     await add_user(message.from_user.id)
     is_admin = message.from_user.id == ADMIN_ID
-    await message.answer(
-        "Добро пожаловать в AligatorGameShop 👋",
-        reply_markup=main_keyboard(is_admin)
+
+    # Персонализированное приветствие
+    caption = (
+        f"Assalomu aleykum {message.from_user.full_name} 👋\n\n"
+        "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali kirib foydalanishingiz mumkin ✅.\n\n"
+        "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
+    )
+
+    await message.answer_photo(
+        photo=WELCOME_PHOTO_ID,
+        caption=caption,
+        reply_markup=main_keyboard(message.from_user.id)
     )
 
 # ================= GUIDE =================
@@ -104,6 +115,7 @@ async def send_guide(callback: types.CallbackQuery):
             ]
         ]
     )
+    # Отправляем видео с кнопкой, кнопки не пропадают
     await callback.message.answer_video(
         video=GUIDE_VIDEO_ID,
         caption="📖 Qo'llanma\n\nBu videoda qanday buyurtma qilish ko‘rsatilgan.",
@@ -115,8 +127,9 @@ async def send_guide(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "admin_panel")
 async def admin_panel(callback: types.CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
+        await callback.answer("❌ Доступ запрещён")
         return
-    await callback.message.edit_text(
+    await callback.message.answer(
         "🛠 Админ панель",
         reply_markup=admin_keyboard()
     )
@@ -222,7 +235,7 @@ async def preview_broadcast(message: types.Message, state: FSMContext):
 @dp.callback_query(F.data == "cancel_broadcast")
 async def cancel_broadcast(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Рассылка отменена.")
+    await callback.message.answer("❌ Рассылка отменена.")
 
 @dp.callback_query(F.data == "confirm_broadcast")
 async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
@@ -256,24 +269,26 @@ async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
         except:
             pass
 
-    await callback.message.edit_text(f"✅ Рассылка завершена.\nОтправлено: {count}")
+    await callback.message.answer(f"✅ Рассылка завершена.\nОтправлено: {count}")
     await state.clear()
 
-# ================= GET VIDEO FILE_ID =================
+# ================= UNIVERSAL GET FILE_ID =================
 @dp.message(Command("getvideoid"))
-async def get_video_id(message: types.Message):
+async def get_file_id(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
-    await message.reply("📤 Отправьте видео, чтобы получить file_id.")
 
-    @dp.message()
-    async def handle_video(message2: types.Message):
-        if message2.from_user.id != ADMIN_ID:
-            return
-        if message2.video:
-            await message2.reply(f"✅ File ID вашего видео:\n`{message2.video.file_id}`", parse_mode="Markdown")
-        else:
-            await message2.reply("❌ Это не видео. Пожалуйста, отправьте видео.")
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        await message.reply(f"✅ File ID вашего фото:\n`{file_id}`", parse_mode="Markdown")
+    elif message.video:
+        file_id = message.video.file_id
+        await message.reply(f"✅ File ID вашего видео:\n`{file_id}`", parse_mode="Markdown")
+    elif message.document:
+        file_id = message.document.file_id
+        await message.reply(f"✅ File ID вашего документа:\n`{file_id}`", parse_mode="Markdown")
+    else:
+        await message.reply("❌ Это не фото, видео или документ. Пожалуйста, отправьте подходящий файл.")
 
 # ================= RUN =================
 async def main():
