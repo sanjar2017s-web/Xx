@@ -11,8 +11,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # токен бота из Railway Variables
 ADMIN_ID = 888130657  # <-- Вставь сюда свой числовой Telegram ID
-GUIDE_VIDEO_ID = "PUT_VIDEO_FILE_ID_HERE"  # <-- File ID видео для Qo'llanma
-WELCOME_PHOTO_ID = "PUT_WELCOME_PHOTO_FILE_ID_HERE"  # <-- File ID фото для приветствия
+GUIDE_VIDEO_ID = "BAACAgQAAxkBAAONaaDK9Rj41Z6Xqlwdk-Zc7KFxR6IAAt0cAAKA6bFQ3_m8iKqhHE86BA"  # <-- File ID видео для Qo'llanma
+WELCOME_PHOTO_ID = "AgACAgQAAxkBAANNaaDF6KIxz_YX9YnABXs791Ls940AAusMaxubCghRJC2sUOfksW4BAAMCAAN4AAM6BA"  # <-- File ID фото для приветствия
 # ==========================================
 
 bot = Bot(token=TOKEN)
