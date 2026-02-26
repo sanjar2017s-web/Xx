@@ -7,12 +7,13 @@ from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+import datetime
 
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # токен бота из Railway Variables
-ADMIN_ID = 888130657  # <-- Вставь сюда свой числовой Telegram ID
-GUIDE_VIDEO_ID = "BAACAgQAAxkBAAONaaDK9Rj41Z6Xqlwdk-Zc7KFxR6IAAt0cAAKA6bFQ3_m8iKqhHE86BA"  # <-- File ID видео для Qo'llanma
-WELCOME_PHOTO_ID = "AgACAgQAAxkBAANNaaDF6KIxz_YX9YnABXs791Ls940AAusMaxubCghRJC2sUOfksW4BAAMCAAN4AAM6BA"  # <-- File ID фото для приветствия
+ADMIN_ID = 888130657
+GUIDE_VIDEO_ID = "BAACAgQAAxkBAAONaaDK9Rj41Z6Xqlwdk-Zc7KFxR6IAAt0cAAKA6bFQ3_m8iKqhHE86BA"
+WELCOME_PHOTO_ID = "AgACAgQAAxkBAANNaaDF6KIxz_YX9YnABXs791Ls940AAusMaxubCghRJC2sUOfksW4BAAMCAAN4AAM6BA"
 # ==========================================
 
 bot = Bot(token=TOKEN)
@@ -23,7 +24,16 @@ async def init_db():
     async with aiosqlite.connect("users.db") as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY
+                user_id INTEGER PRIMARY KEY,
+                first_join TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS button_clicks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                button_name TEXT,
+                click_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         await db.commit()
@@ -37,6 +47,14 @@ async def get_all_users():
     async with aiosqlite.connect("users.db") as db:
         async with db.execute("SELECT user_id FROM users") as cursor:
             return await cursor.fetchall()
+
+async def log_button_click(user_id: int, button_name: str):
+    async with aiosqlite.connect("users.db") as db:
+        await db.execute(
+            "INSERT INTO button_clicks (user_id, button_name) VALUES (?, ?)",
+            (user_id, button_name)
+        )
+        await db.commit()
 
 # ================= STATES =================
 class BroadcastState(StatesGroup):
@@ -54,7 +72,7 @@ def main_keyboard(user_id: int):
     keyboard = [
         [
             InlineKeyboardButton(
-                text="🛒 AligatorGameShop",
+                text="💎 AligatorGameShop",
                 web_app=WebAppInfo(url="https://aligatorgameshop.com")
             )
         ],
@@ -83,7 +101,8 @@ def main_keyboard(user_id: int):
 
 def admin_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📢 Рассылка", callback_data="broadcast")]
+        [InlineKeyboardButton(text="📢 Рассылка", callback_data="broadcast")],
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="stats")]
     ])
 
 # ================= START =================
@@ -111,22 +130,30 @@ async def start_handler(message: types.Message):
         reply_markup=main_keyboard(message.from_user.id)
     )
 
-# ================= GUIDE =================
+# ================= GUIDE HANDLER =================
 @dp.callback_query(F.data == "guide")
 async def send_guide(callback: types.CallbackQuery):
+    await log_button_click(callback.from_user.id, "Qo'llanma")
+
+    guide_text = (
+        "✨Ushbu videoda bizning saytimizdan qanday foydalanish kerakligi ko'rsatilgan "
+        "agar savollaringiz bo'lsa yoki qiyinchiliklarga duch kelsangiz @MobileLegendsDiamondUz ga murojaat qiling✊."
+    )
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🛒 Открыть магазин",
+                    text="💎 AligatorGameShop",
                     web_app=WebAppInfo(url="https://aligatorgameshop.com")
                 )
             ]
         ]
     )
+
     await callback.message.answer_video(
         video=GUIDE_VIDEO_ID,
-        caption="📖 Qo'llanma\n\nBu videoda qanday buyurtma qilish ko‘rsatilgan.",
+        caption=guide_text,
         reply_markup=keyboard
     )
     await callback.answer()
@@ -307,6 +334,56 @@ async def handle_file(message: types.Message, state: FSMContext):
         return
 
     await state.clear()
+
+# ================= STATISTICS =================
+async def get_stats(period: str = "day"):
+    now = datetime.datetime.now()
+    async with aiosqlite.connect("users.db") as db:
+        async with db.execute("SELECT COUNT(*) FROM users") as cursor:
+            total_users = (await cursor.fetchone())[0]
+
+        if period == "day":
+            start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == "month":
+            start_time = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            start_time = datetime.datetime(1970,1,1)
+
+        async with db.execute(
+            "SELECT button_name, COUNT(*) FROM button_clicks WHERE click_time >= ? GROUP BY button_name",
+            (start_time,)
+        ) as cursor:
+            button_stats = await cursor.fetchall()
+
+        async with db.execute(
+            "SELECT COUNT(DISTINCT user_id) FROM button_clicks WHERE click_time >= ?",
+            (start_time,)
+        ) as cursor:
+            active_users = (await cursor.fetchone())[0]
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "button_stats": button_stats
+    }
+
+@dp.callback_query(F.data == "stats")
+async def show_stats(callback: types.CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("❌ Доступ запрещён")
+        return
+
+    stats = await get_stats("day")
+
+    text = f"📊 Статистика бота:\n\n" \
+           f"Всего пользователей: {stats['total_users']}\n" \
+           f"Активных сегодня: {stats['active_users']}\n\n" \
+           f"Нажатия кнопок:\n"
+
+    for btn_name, count in stats["button_stats"]:
+        text += f"- {btn_name}: {count}\n"
+
+    await callback.message.answer(text)
 
 # ================= RUN =================
 async def main():
