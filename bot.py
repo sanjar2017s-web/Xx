@@ -118,12 +118,6 @@ async def start_handler(message: types.Message):
         "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
     )
 
-    if not WELCOME_PHOTO_ID or WELCOME_PHOTO_ID.startswith("PUT_"):
-        await message.answer(
-            "❌ WELCOME_PHOTO_ID не задан. Пожалуйста, вставьте действительный file_id фото."
-        )
-        return
-
     await message.answer_photo(
         photo=WELCOME_PHOTO_ID,
         caption=caption,
@@ -147,6 +141,12 @@ async def send_guide(callback: types.CallbackQuery):
                     text="💎 AligatorGameShop",
                     web_app=WebAppInfo(url="https://aligatorgameshop.com")
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙Asosiy menyu",
+                    callback_data="main_menu"
+                )
             ]
         ]
     )
@@ -155,6 +155,23 @@ async def send_guide(callback: types.CallbackQuery):
         video=GUIDE_VIDEO_ID,
         caption=guide_text,
         reply_markup=keyboard
+    )
+    await callback.answer()
+
+# ================= "🔙Asosiy menyu" =================
+@dp.callback_query(F.data == "main_menu")
+async def go_to_main_menu(callback: types.CallbackQuery):
+    caption = (
+        f"Assalomu aleykum {str(callback.from_user.full_name)} 👋\n\n"
+        "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali "
+        "kirib foydalanishingiz mumkin ✅.\n\n"
+        "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
+    )
+
+    await callback.message.answer_photo(
+        photo=WELCOME_PHOTO_ID,
+        caption=caption,
+        reply_markup=main_keyboard(callback.from_user.id)
     )
     await callback.answer()
 
@@ -338,16 +355,16 @@ async def handle_file(message: types.Message, state: FSMContext):
 # ================= STATISTICS =================
 async def get_stats(period: str = "day"):
     now = datetime.datetime.now()
+    if period == "day":
+        start_time = now.strftime("%Y-%m-%d 00:00:00")
+    elif period == "month":
+        start_time = now.strftime("%Y-%m-01 00:00:00")
+    else:
+        start_time = "1970-01-01 00:00:00"
+
     async with aiosqlite.connect("users.db") as db:
         async with db.execute("SELECT COUNT(*) FROM users") as cursor:
             total_users = (await cursor.fetchone())[0]
-
-        if period == "day":
-            start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif period == "month":
-            start_time = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        else:
-            start_time = datetime.datetime(1970,1,1)
 
         async with db.execute(
             "SELECT button_name, COUNT(*) FROM button_clicks WHERE click_time >= ? GROUP BY button_name",
