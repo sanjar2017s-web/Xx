@@ -17,6 +17,7 @@ GUIDE_EMOJI_ID = "5467596412663372909"
 CHANNEL_ID = "5445284980978621387"
 ADMIN_EMOJI_ID = "5454219968948229067"
 ASOSIY_MENU_EMOJI_ID = "5264727218734524899"
+ADMIN_BUTTON_EMOJI_ID = "5431449001532594346"
 
 GUIDE_VIDEO_ID = "BAACAgQAAxkBAAONaaDK9Rj41Z6Xqlwdk-Zc7KFxR6IAAt0cAAKA6bFQ3_m8iKqhHE86BA"
 WELCOME_PHOTO_ID = "AgACAgQAAxkBAANNaaDF6KIxz_YX9YnABXs791Ls940AAusMaxubCghRJC2sUOfksW4BAAMCAAN4AAM6BA"
@@ -79,7 +80,7 @@ def main_keyboard(user_id: int):
     keyboard = [
         [
             InlineKeyboardButton(
-                text="💎 AligatorGameShop",
+                text="AligatorGameShop",
                 web_app=WebAppInfo(url="https://aligatorgameshop.com"),
                 icon_custom_emoji_id=DIAMOND_ID
             )
@@ -88,7 +89,7 @@ def main_keyboard(user_id: int):
             InlineKeyboardButton(
                 text="Qo'llanma",
                 callback_data="guide",
-                icon_custom_emoji_id=GUIDE_EMOJI_ID
+                icon_custom_emoji_id=GUIDE_EMOJI_ID  # эмодзи справа
             ),
             InlineKeyboardButton(
                 text="Telegram Kanalimiz",
@@ -98,8 +99,9 @@ def main_keyboard(user_id: int):
         ],
         [
             InlineKeyboardButton(
-                text="👤 Admin",
-                url="https://t.me/MobileLegendsDiamondUz"
+                text="Adminga yozish",
+                url="https://t.me/MobileLegendsDiamondUz",
+                icon_custom_emoji_id=ADMIN_BUTTON_EMOJI_ID
             )
         ]
     ]
@@ -127,7 +129,7 @@ def guide_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="💎 AligatorGameShop",
+                text="AligatorGameShop",
                 web_app=WebAppInfo(url="https://aligatorgameshop.com"),
                 icon_custom_emoji_id=DIAMOND_ID
             )
