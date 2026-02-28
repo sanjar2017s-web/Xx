@@ -12,6 +12,12 @@ import datetime
 # ================= CONFIG =================
 TOKEN = os.getenv("BOT_TOKEN")  # токен бота из Railway Variables
 ADMIN_ID = 888130657
+DIAMOND_ID = "5471952986970267163"
+GUIDE_EMOJI_ID = "5467596412663372909"
+CHANNEL_ID = "5445284980978621387"
+ADMIN_EMOJI_ID = "5454219968948229067"
+ASOSIY_MENU_EMOJI_ID = "5264727218734524899"
+
 GUIDE_VIDEO_ID = "BAACAgQAAxkBAAONaaDK9Rj41Z6Xqlwdk-Zc7KFxR6IAAt0cAAKA6bFQ3_m8iKqhHE86BA"
 WELCOME_PHOTO_ID = "AgACAgQAAxkBAANNaaDF6KIxz_YX9YnABXs791Ls940AAusMaxubCghRJC2sUOfksW4BAAMCAAN4AAM6BA"
 # ==========================================
@@ -69,21 +75,25 @@ class GetFileState(StatesGroup):
 # ================= KEYBOARDS =================
 def main_keyboard(user_id: int):
     is_admin = user_id == ADMIN_ID
+
     keyboard = [
         [
             InlineKeyboardButton(
                 text="💎 AligatorGameShop",
-                web_app=WebAppInfo(url="https://aligatorgameshop.com")
+                web_app=WebAppInfo(url="https://aligatorgameshop.com"),
+                icon_custom_emoji_id=DIAMOND_ID
             )
         ],
         [
             InlineKeyboardButton(
-                text="Qo'llanma ❓",
-                callback_data="guide"
+                text="Qo'llanma",
+                callback_data="guide",
+                icon_custom_emoji_id=GUIDE_EMOJI_ID
             ),
             InlineKeyboardButton(
-                text="📢 Telegram Kanalimiz",
-                url="https://t.me/aligatorgameshop"
+                text="Telegram Kanalimiz",
+                url="https://t.me/aligatorgameshop",
+                icon_custom_emoji_id=CHANNEL_ID
             )
         ],
         [
@@ -93,10 +103,18 @@ def main_keyboard(user_id: int):
             )
         ]
     ]
+
     if is_admin:
         keyboard.append(
-            [InlineKeyboardButton(text="🛠 Admin Panel", callback_data="admin_panel")]
+            [
+                InlineKeyboardButton(
+                    text="Admin Panel",
+                    callback_data="admin_panel",
+                    icon_custom_emoji_id=ADMIN_EMOJI_ID
+                )
+            ]
         )
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def admin_keyboard():
@@ -105,14 +123,31 @@ def admin_keyboard():
         [InlineKeyboardButton(text="📊 Статистика", callback_data="stats")]
     ])
 
+def guide_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="💎 AligatorGameShop",
+                web_app=WebAppInfo(url="https://aligatorgameshop.com"),
+                icon_custom_emoji_id=DIAMOND_ID
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Asosiy Menu",
+                callback_data="main_menu",
+                icon_custom_emoji_id=ASOSIY_MENU_EMOJI_ID
+            )
+        ]
+    ])
+
 # ================= START =================
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     await add_user(message.from_user.id)
-    is_admin = message.from_user.id == ADMIN_ID
 
     caption = (
-        f"Assalomu aleykum {str(message.from_user.full_name)} 👋\n\n"
+        f"Assalomu aleykum {message.from_user.full_name} 👋\n\n"
         "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali "
         "kirib foydalanishingiz mumkin ✅.\n\n"
         "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
@@ -134,35 +169,18 @@ async def send_guide(callback: types.CallbackQuery):
         "agar savollaringiz bo'lsa yoki qiyinchiliklarga duch kelsangiz @MobileLegendsDiamondUz ga murojaat qiling✊."
     )
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="💎 AligatorGameShop",
-                    web_app=WebAppInfo(url="https://aligatorgameshop.com")
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔙Asosiy menyu",
-                    callback_data="main_menu"
-                )
-            ]
-        ]
-    )
-
     await callback.message.answer_video(
         video=GUIDE_VIDEO_ID,
         caption=guide_text,
-        reply_markup=keyboard
+        reply_markup=guide_keyboard()
     )
     await callback.answer()
 
-# ================= "🔙Asosiy menyu" =================
+# ================= "Asosiy Menu" =================
 @dp.callback_query(F.data == "main_menu")
 async def go_to_main_menu(callback: types.CallbackQuery):
     caption = (
-        f"Assalomu aleykum {str(callback.from_user.full_name)} 👋\n\n"
+        f"Assalomu aleykum {callback.from_user.full_name} 👋\n\n"
         "Ushbu bot orqali bizning xizmatlarimizdan to'g'ridan to'g'ri telegram orqali "
         "kirib foydalanishingiz mumkin ✅.\n\n"
         "Botimizga xush kelibsiz, bizni tanlaganingiz uchun raxmat 🤝"
@@ -226,9 +244,7 @@ async def get_content(message: types.Message, state: FSMContext):
         caption=caption
     )
     await state.set_state(BroadcastState.waiting_for_button_text)
-    await message.answer(
-        "Введите текст кнопки.\nЕсли кнопка не нужна — отправьте: -"
-    )
+    await message.answer("Введите текст кнопки.\nЕсли кнопка не нужна — отправьте: -")
 
 @dp.message(BroadcastState.waiting_for_button_text)
 async def get_button_text(message: types.Message, state: FSMContext):
@@ -240,9 +256,7 @@ async def get_button_text(message: types.Message, state: FSMContext):
         return
     await state.update_data(button_text=message.text)
     await state.set_state(BroadcastState.waiting_for_button_link)
-    await message.answer(
-        "Введите ссылку для кнопки.\nМожно вставить обычную ссылку (https://…) или Mini App URL"
-    )
+    await message.answer("Введите ссылку для кнопки.\nМожно вставить обычную ссылку (https://…) или Mini App URL")
 
 @dp.message(BroadcastState.waiting_for_button_link)
 async def get_button_link(message: types.Message, state: FSMContext):
@@ -317,7 +331,7 @@ async def confirm_broadcast(callback: types.CallbackQuery, state: FSMContext):
             else:
                 await bot.send_message(chat_id=user[0], text=data["content_id"], reply_markup=keyboard)
             count += 1
-            await asyncio.sleep(0.05)  # антиспам
+            await asyncio.sleep(0.05)
         except:
             pass
 
